@@ -1,0 +1,36 @@
+name: Update downstream dependency
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  update-downstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.TARGET_REPO }}
+          token: ${{ secrets.TARGET_REPO_TOKEN }}
+
+      - name: Update SHA in pyproject.toml
+        run: |
+          NEW_LINE='casbin-django-orm-adapter = { url = "https://github.com/Navys-Tech/casbin-python-django-orm-adapter/archive/${{ github.sha }}.tar.gz" }'
+          sed -i "s|.*casbin-django-orm-adapter.*Navys-Tech.*|$NEW_LINE|" pyproject.toml
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Update lockfile
+        run: uv lock
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.TARGET_REPO_TOKEN }}
+          branch: chore/update-casbin-adapter
+          commit-message: "chore: update casbin-django-orm-adapter to ${{ github.sha }}"
+          title: "chore: update casbin-django-orm-adapter"
+          body: |
+            Updates `casbin-django-orm-adapter` archive URL to [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }}).
